@@ -1,6 +1,7 @@
-import { GameState, Player } from "@/lib/types"
+import { GameState } from "@/lib/types"
 import PlayerHand from "./PlayerHand"
 import Card from "./Card"
+import { canTakeInsurance } from "@/lib/game"
 
 export default function GameBoard({ game, myPlayerId }: { game: GameState; myPlayerId: string }) {
   if (!game) return null
@@ -10,6 +11,7 @@ export default function GameBoard({ game, myPlayerId }: { game: GameState; myPla
     ? game.players[game.currentPlayerIndex]
     : null
   const isMyTurn = currentPlayer?.id === myPlayerId && !isFinished
+  const insuranceAvailable = canTakeInsurance(game)
 
   return (
     <div className="space-y-6">
@@ -31,18 +33,33 @@ export default function GameBoard({ game, myPlayerId }: { game: GameState; myPla
             ))
           )}
         </div>
+        {insuranceAvailable && isMyTurn && (
+          <div className="mt-2 bg-yellow-100 border border-yellow-300 rounded-lg px-3 py-2 text-sm text-yellow-800">
+            🛡️ Dealer menunjukkan Ace! Insurance tersedia.
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {game.players.map((player: Player) => (
+        {game.players.map((player) => (
           <PlayerHand
             key={player.id}
             player={player}
             isCurrentTurn={player.id === currentPlayer?.id && !isFinished}
-            showResult={isFinished}
+            isFinished={isFinished}
+            currentHandIndex={player.id === currentPlayer?.id ? game.currentHandIndex : 0}
           />
         ))}
       </div>
+
+      {isFinished && game.players.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <h4 className="font-bold text-gray-700 mb-2">📊 Ringkasan</h4>
+          <div className="space-y-1 text-sm">
+            <p className="text-gray-600">Round: {game.round} | Dek sisa: {game.deck.length} kartu</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

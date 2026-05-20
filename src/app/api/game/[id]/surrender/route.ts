@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { calculateHand, getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
+import { canSurrender, getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -27,23 +27,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const player = room.game.players[playerIdx]
     const hand = getCurrentHand(player, room.game.currentHandIndex)
-    if (!hand) {
-      return NextResponse.json({ success: false, error: "Hand tidak ditemukan" }, { status: 400 })
+    if (!hand || !canSurrender(hand)) {
+      return NextResponse.json({ success: false, error: "Tidak bisa surrender" }, { status: 400 })
     }
 
-    const card = room.game.deck.pop()
-    if (card) hand.cards.push(card)
-    hand.score = calculateHand(hand.cards)
+    hand.isSurrendered = true
+    hand.isDone = true
 
-    if (hand.score >= 21) {
-      hand.isDone = true
+    const refund = Math.floor(hand.bet / 2)
+    player.balance += refund
+
+    room.game.currentHandIndex++
+    while (
+      room.game.currentHandIndex < player.hands.length &&
+      player.hands[room.game.currentHandIndex].isDone
+    ) {
       room.game.currentHandIndex++
-      while (
-        room.game.currentHandIndex < player.hands.length &&
-        player.hands[room.game.currentHandIndex].isDone
-      ) {
-        room.game.currentHandIndex++
-      }
     }
 
     if (hasPlayerDoneAllHands(player)) {
@@ -58,8 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         room.game.currentHandIndex = 0
       }
 
-      const allDone = room.game.players.every((p) => hasPlayerDoneAllHands(p))
-      if (allDone) {
+      if (room.game.currentPlayerIndex >= room.game.players.length) {
         const { runDealerSequence } = await import("@/lib/game")
         const result = runDealerSequence(room.game.deck, room.game.players, room.game.dealerHand, room.game.dealerBlackjack)
         room.game.dealerHand = result.dealerHand
@@ -75,6 +73,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, game: room.game })
   } catch {
-    return NextResponse.json({ success: false, error: "Gagal hit" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Gagal surrender" }, { status: 500 })
   }
 }

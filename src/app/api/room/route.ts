@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { createDeck, dealInitialCards, calculateHand } from "@/lib/game"
 import { generateRoomCode, generateId } from "@/lib/generateCode"
+import { DEFAULT_SETTINGS, STARTING_BALANCE } from "@/lib/types"
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,10 +14,6 @@ export async function POST(req: NextRequest) {
     const roomId = generateId()
     const code = generateRoomCode()
     const playerId = generateId()
-    const deck = createDeck()
-
-    const playerHand: any[] = []
-    dealInitialCards(deck, [playerHand])
 
     const room = {
       id: roomId,
@@ -30,18 +26,34 @@ export async function POST(req: NextRequest) {
           {
             id: playerId,
             name: playerName.trim(),
-            hand: playerHand,
-            score: calculateHand(playerHand),
-            isDone: false,
+            hands: [],
             isHost: true,
+            balance: STARTING_BALANCE,
+            totalBet: DEFAULT_SETTINGS.defaultBet,
+            insuranceBet: 0,
+            insuranceDecided: false,
+            stats: {
+              totalGames: 0,
+              totalWins: 0,
+              totalLosses: 0,
+              totalPushes: 0,
+              blackjackCount: 0,
+              currentStreak: 0,
+              bestWinStreak: 0,
+            },
           },
         ],
         dealerHand: [],
         dealerScore: 0,
         currentPlayerIndex: 0,
-        deck,
-        result: null,
+        currentHandIndex: 0,
+        deck: [],
         createdAt: Date.now(),
+        round: 0,
+        settings: { ...DEFAULT_SETTINGS },
+        turnStartedAt: 0,
+        insuranceOffered: false,
+        dealerBlackjack: false,
       },
     }
 

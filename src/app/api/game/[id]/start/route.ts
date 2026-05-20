@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { createDeck, dealInitialCards, calculateHand } from "@/lib/game"
+import { createDeck, dealInitialCards, createInitialHand, dealerHasBlackjack } from "@/lib/game"
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,20 +20,40 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const deck = createDeck()
-    const hands = room.game.players.map(() => [] as any[])
-    dealInitialCards(deck, hands)
 
-    room.game.players = room.game.players.map((p, i) => ({
-      ...p,
-      hand: hands[i],
-      score: calculateHand(hands[i]),
-      isDone: false,
-    }))
+    const dealerHand: import("@/lib/types").Card[] = []
+    const d1 = deck.pop()
+    const d2 = deck.pop()
+    if (d1 && d2) dealerHand.push(d1, d2)
+
+    const rawHands = dealInitialCards(deck, room.game.players.length)
+
+    const updatedPlayers = room.game.players.map((p, i) => {
+      const bet = Math.min(p.totalBet || room.game.settings.defaultBet, p.balance)
+      p.balance -= bet
+      return {
+        ...p,
+        hands: [createInitialHand(rawHands[i], bet)],
+        insuranceDecided: false,
+        insuranceBet: 0,
+      }
+    })
 
     room.game.deck = deck
-    room.game.dealerHand = []
+    room.game.dealerHand = dealerHand
+    room.game.dealerScore = 0
     room.game.currentPlayerIndex = 0
+    room.game.currentHandIndex = 0
+    room.game.players = updatedPlayers
     room.game.status = "playing"
+    room.game.round = 1
+    room.game.turnStartedAt = Date.now()
+    room.game.insuranceOffered = false
+    room.game.dealerBlackjack = false
+
+    if (dealerHasBlackjack(dealerHand)) {
+      room.game.dealerBlackjack = true
+    }
 
     await kv.set(room.id, room)
 

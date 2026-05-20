@@ -31,19 +31,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Hand tidak ditemukan" }, { status: 400 })
     }
 
+    if (hand.cards.length !== 2 || hand.isDoubled) {
+      return NextResponse.json({ success: false, error: "Tidak bisa double" }, { status: 400 })
+    }
+
+    if (player.balance < hand.bet) {
+      return NextResponse.json({ success: false, error: "Saldo tidak cukup" }, { status: 400 })
+    }
+
+    player.balance -= hand.bet
+    hand.bet *= 2
+    hand.isDoubled = true
+
     const card = room.game.deck.pop()
     if (card) hand.cards.push(card)
     hand.score = calculateHand(hand.cards)
+    hand.isDone = true
 
-    if (hand.score >= 21) {
-      hand.isDone = true
+    room.game.currentHandIndex++
+    while (
+      room.game.currentHandIndex < player.hands.length &&
+      player.hands[room.game.currentHandIndex].isDone
+    ) {
       room.game.currentHandIndex++
-      while (
-        room.game.currentHandIndex < player.hands.length &&
-        player.hands[room.game.currentHandIndex].isDone
-      ) {
-        room.game.currentHandIndex++
-      }
     }
 
     if (hasPlayerDoneAllHands(player)) {
@@ -58,8 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         room.game.currentHandIndex = 0
       }
 
-      const allDone = room.game.players.every((p) => hasPlayerDoneAllHands(p))
-      if (allDone) {
+      if (room.game.currentPlayerIndex >= room.game.players.length) {
         const { runDealerSequence } = await import("@/lib/game")
         const result = runDealerSequence(room.game.deck, room.game.players, room.game.dealerHand, room.game.dealerBlackjack)
         room.game.dealerHand = result.dealerHand
@@ -75,6 +84,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, game: room.game })
   } catch {
-    return NextResponse.json({ success: false, error: "Gagal hit" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Gagal double" }, { status: 500 })
   }
 }

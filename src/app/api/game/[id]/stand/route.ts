@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { runDealerSequence } from "@/lib/game"
+import { hasPlayerDoneAllHands } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,21 +25,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Bukan giliranmu" }, { status: 400 })
     }
 
-    room.game.players[playerIdx].isDone = true
-    room.game.currentPlayerIndex++
+    const player = room.game.players[playerIdx]
+    const hand = player.hands[room.game.currentHandIndex]
+    if (hand) hand.isDone = true
 
-    while (room.game.currentPlayerIndex < room.game.players.length && room.game.players[room.game.currentPlayerIndex].isDone) {
-      room.game.currentPlayerIndex++
+    room.game.currentHandIndex++
+    while (
+      room.game.currentHandIndex < player.hands.length &&
+      player.hands[room.game.currentHandIndex].isDone
+    ) {
+      room.game.currentHandIndex++
     }
 
-    const allDone = room.game.players.every((p) => p.isDone)
+    if (hasPlayerDoneAllHands(player)) {
+      room.game.currentPlayerIndex++
+      room.game.currentHandIndex = 0
 
-    if (allDone) {
-      const result = runDealerSequence(room.game.deck, room.game.players)
-      room.game.dealerHand = result.dealerHand
-      room.game.dealerScore = result.dealerScore
-      room.game.players = result.players
-      room.game.status = "finished"
+      while (
+        room.game.currentPlayerIndex < room.game.players.length &&
+        hasPlayerDoneAllHands(room.game.players[room.game.currentPlayerIndex])
+      ) {
+        room.game.currentPlayerIndex++
+        room.game.currentHandIndex = 0
+      }
+
+      const allDone = room.game.players.every((p) => hasPlayerDoneAllHands(p))
+      if (allDone) {
+        const { runDealerSequence } = await import("@/lib/game")
+        const result = runDealerSequence(room.game.deck, room.game.players, room.game.dealerHand, room.game.dealerBlackjack)
+        room.game.dealerHand = result.dealerHand
+        room.game.dealerScore = result.dealerScore
+        room.game.players = result.players
+        room.game.status = "finished"
+      }
+    } else {
+      room.game.turnStartedAt = Date.now()
     }
 
     await kv.set(room.id, room)
