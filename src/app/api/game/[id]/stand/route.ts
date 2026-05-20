@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { calculateHand, playDealerTurn, determineWinner } from "@/lib/game"
+import { runDealerSequence } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,24 +28,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     room.game.players[playerIdx].isDone = true
     room.game.currentPlayerIndex++
 
+    while (room.game.currentPlayerIndex < room.game.players.length && room.game.players[room.game.currentPlayerIndex].isDone) {
+      room.game.currentPlayerIndex++
+    }
+
     const allDone = room.game.players.every((p) => p.isDone)
 
     if (allDone) {
-      const dealerHand: any[] = []
-      const card1 = room.game.deck.pop()
-      const card2 = room.game.deck.pop()
-      if (card1 && card2) {
-        dealerHand.push(card1, card2)
-      }
-      playDealerTurn(room.game.deck, dealerHand)
-      room.game.dealerHand = dealerHand
-      room.game.dealerScore = calculateHand(dealerHand)
-
-      const results = determineWinner(room.game.players, room.game.dealerScore)
-      room.game.players = room.game.players.map((p, i) => ({
-        ...p,
-        result: results[i],
-      }))
+      const result = runDealerSequence(room.game.deck, room.game.players)
+      room.game.dealerHand = result.dealerHand
+      room.game.dealerScore = result.dealerScore
+      room.game.players = result.players
       room.game.status = "finished"
     }
 

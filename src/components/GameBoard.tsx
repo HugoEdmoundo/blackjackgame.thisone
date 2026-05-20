@@ -30,11 +30,6 @@ export default function GameBoard({ game, myPlayerId }: { game: GameState; myPla
               <Card key={i} card={card} hidden={!isFinished && i === 0} />
             ))
           )}
-          {!isFinished && game.dealerHand.length > 0 && (
-            <Card
-              card={game.dealerHand[game.dealerHand.length - 1]}
-            />
-          )}
         </div>
       </div>
 

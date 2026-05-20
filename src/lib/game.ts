@@ -86,6 +86,25 @@ export function dealInitialCards(deck: Card[], hands: Card[][]): void {
   }
 }
 
+export function runDealerSequence(deck: Card[], players: Player[]): {
+  dealerHand: Card[]
+  dealerScore: number
+  players: Player[]
+} {
+  const dealerHand: Card[] = []
+  const card1 = deck.pop()
+  const card2 = deck.pop()
+  if (card1 && card2) dealerHand.push(card1, card2)
+  playDealerTurn(deck, dealerHand)
+  const dealerScore = calculateHand(dealerHand)
+  const results = determineWinner(players, dealerScore)
+  return {
+    dealerHand,
+    dealerScore,
+    players: players.map((p, i) => ({ ...p, result: results[i] })),
+  }
+}
+
 export function formatHand(hand: Card[]): string {
   return hand.map((c) => `[${c.rank}${c.suit}]`).join(" ")
 }

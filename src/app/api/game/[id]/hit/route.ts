@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { calculateHand } from "@/lib/game"
+import { calculateHand, runDealerSequence } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,9 +35,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (player.score >= 21) {
       player.isDone = true
       room.game.currentPlayerIndex++
-      if (room.game.currentPlayerIndex >= room.game.players.length) {
-        room.game.currentPlayerIndex = room.game.players.length - 1
-      }
+    }
+
+    while (room.game.currentPlayerIndex < room.game.players.length && room.game.players[room.game.currentPlayerIndex].isDone) {
+      room.game.currentPlayerIndex++
+    }
+
+    const allDone = room.game.players.every((p) => p.isDone)
+    if (allDone) {
+      const result = runDealerSequence(room.game.deck, room.game.players)
+      room.game.dealerHand = result.dealerHand
+      room.game.dealerScore = result.dealerScore
+      room.game.players = result.players
+      room.game.status = "finished"
     }
 
     await kv.set(room.id, room)
