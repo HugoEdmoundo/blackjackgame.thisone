@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint"
   },
-"dependencies": {
+  "dependencies": {
+    "@lottiefiles/react-lottie-player": "^3.6.0",
+    "@upstash/redis": "^1",
+    "lucide-react": "^1.16.0",
     "next": "^16",
     "react": "^19",
-    "react-dom": "^19",
-    "@upstash/redis": "^1"
+    "react-dom": "^19"
   },
   "devDependencies": {
     "@types/node": "^20",

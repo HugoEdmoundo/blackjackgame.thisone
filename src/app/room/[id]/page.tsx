@@ -5,7 +5,15 @@ import { useParams, useSearchParams } from "next/navigation"
 import { GameState, GameSettings } from "@/lib/types"
 import GameBoard from "@/components/GameBoard"
 import RoomLobby from "@/components/RoomLobby"
+import GameLayout from "@/components/GameLayout"
+import ActionBar from "@/components/ActionBar"
+import LoadingScreen from "@/components/LoadingScreen"
+import ResultOverlay from "@/components/ResultOverlay"
+import Confetti from "@/components/Confetti"
+import { showToast } from "@/components/Toast"
 import { canTakeInsurance, canSplit, canDoubleDown, canSurrender, getCurrentHand } from "@/lib/game"
+import { dealCard, chipSound, winSound, loseSound, blackjackFanfare, buttonClick, insuranceSound } from "@/lib/sounds"
+import { BarChart3, Play, Plus } from "lucide-react"
 
 export default function RoomPage() {
   const params = useParams()
@@ -18,21 +26,64 @@ export default function RoomPage() {
   const [error, setError] = useState("")
   const [actionLoading, setActionLoading] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [confettiTrigger, setConfettiTrigger] = useState(0)
+  const [darkMode, setDarkMode] = useState(false)
+  const [betInput, setBetInput] = useState(10)
+  const prevStatusRef = useRef<string | null>(null)
+  const prevBalanceRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Init dark mode
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark")
+    setDarkMode(isDark)
+  }, [])
+
+  function toggleDark() {
+    const next = !darkMode
+    setDarkMode(next)
+    document.documentElement.classList.toggle("dark", next)
+    try { localStorage.setItem("bj-theme", next ? "dark" : "light") } catch {}
+  }
+
+  // Fetch game state
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch(`/api/game/${roomId}`)
       const data = await res.json()
       if (data.success) {
+        const prev = game
         setGame(data.game)
+
+        if (prev && prev.status !== data.game.status) {
+          if (data.game.status === "playing" && prev.status === "waiting") {
+            dealCard()
+            setTimeout(dealCard, 200)
+          }
+          if (data.game.status === "finished") {
+            setTimeout(() => {
+              const myP = data.game.players.find((p: any) => p.id === playerId)
+              if (myP) {
+                const net = myP.hands.reduce((s: number, h: any) => s + (h.result ? h.result.payout - h.bet : 0), 0)
+                if (net > 0) {
+                  const hasBJ = myP.hands.some((h: any) => h.result?.type === "blackjack_win")
+                  if (hasBJ) blackjackFanfare()
+                  else winSound()
+                  setConfettiTrigger((t) => t + 1)
+                } else if (net < 0) {
+                  loseSound()
+                }
+              }
+            }, 500)
+          }
+        }
       }
     } catch {
       // silent retry
     } finally {
       setLoading(false)
     }
-  }, [roomId])
+  }, [roomId, playerId, game])
 
   useEffect(() => {
     fetchState()
@@ -40,33 +91,60 @@ export default function RoomPage() {
     return () => clearInterval(interval)
   }, [fetchState])
 
+  // Toast on balance change
   useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-
-    if (game?.status === "playing" && game.settings.turnTimeout > 0) {
-      timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - game.turnStartedAt) / 1000)
-        const remaining = Math.max(0, game.settings.turnTimeout - elapsed)
-        setTimeLeft(remaining)
-        if (remaining <= 0) {
-          setTimeLeft(0)
+    if (prevBalanceRef.current !== null && game) {
+      const myP = game.players.find((p) => p.id === playerId)
+      if (myP && myP.balance !== prevBalanceRef.current) {
+        const diff = myP.balance - prevBalanceRef.current
+        if (diff > 0) {
+          showToast(`+${diff} chip!`, "success")
+        } else if (diff < 0 && game.status === "playing") {
+          chipSound()
         }
-      }, 1000)
+      }
+    }
+    if (game) {
+      const myP = game.players.find((p) => p.id === playerId)
+      if (myP) prevBalanceRef.current = myP.balance
+    }
+  }, [game, playerId])
+
+  // Timer countdown
+  useEffect(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+    if (game?.status === "playing" && game.settings.turnTimeout > 0) {
+      const myP = game.players.find((p) => p.id === playerId)
+      const isMyTurn = game.currentPlayerIndex < game.players.length &&
+        game.players[game.currentPlayerIndex]?.id === playerId
+      if (isMyTurn && myP) {
+        timerRef.current = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - game.turnStartedAt) / 1000)
+          const remaining = Math.max(0, game.settings.turnTimeout - elapsed)
+          setTimeLeft(remaining)
+          if (remaining <= 0) {
+            doAction(`/api/game/${roomId}/stand`)
+            setTimeLeft(null)
+          }
+        }, 1000)
+      } else {
+        setTimeLeft(null)
+      }
     } else {
       setTimeLeft(null)
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [game?.status, game?.turnStartedAt, game?.currentPlayerIndex, game?.currentHandIndex])
 
+  // Sync bet input
+  useEffect(() => {
+    if (game) {
+      const myP = game.players.find((p) => p.id === playerId)
+      if (myP) setBetInput(myP.totalBet)
+    }
+  }, [game, playerId])
+
+  // API helpers
   async function doAction(url: string, extraBody: Record<string, unknown> = {}) {
     setActionLoading(true)
     setError("")
@@ -79,74 +157,52 @@ export default function RoomPage() {
       const data = await res.json()
       if (data.success) {
         setGame(data.game)
+        if (!url.includes("insurance")) buttonClick()
       } else {
         setError(data.error || "Gagal")
+        showToast(data.error || "Gagal", "error")
       }
     } catch {
       setError("Gagal terhubung ke server")
+      showToast("Gagal terhubung ke server", "error")
     } finally {
       setActionLoading(false)
     }
   }
 
   async function handleStart() {
-    setLoading(true)
-    setError("")
+    setLoading(true); setError("")
     try {
       const res = await fetch(`/api/game/${roomId}/start`, { method: "POST" })
       const data = await res.json()
-      if (data.success) {
-        setGame(data.game)
-      } else {
-        setError(data.error)
-      }
-    } catch {
-      setError("Gagal start game")
-    } finally {
-      setLoading(false)
-    }
+      if (data.success) setGame(data.game)
+      else setError(data.error)
+    } catch { setError("Gagal start game") }
+    finally { setLoading(false) }
   }
 
-  async function handleHit() {
-    await doAction(`/api/game/${roomId}/hit`)
-  }
-
-  async function handleStand() {
-    await doAction(`/api/game/${roomId}/stand`)
-  }
-
-  async function handleDouble() {
-    await doAction(`/api/game/${roomId}/double`)
-  }
-
-  async function handleSplit() {
-    await doAction(`/api/game/${roomId}/split`)
-  }
-
-  async function handleSurrender() {
-    await doAction(`/api/game/${roomId}/surrender`)
-  }
-
+  async function handleHit() { await doAction(`/api/game/${roomId}/hit`); dealCard() }
+  async function handleStand() { await doAction(`/api/game/${roomId}/stand`) }
+  async function handleDouble() { await doAction(`/api/game/${roomId}/double`); chipSound() }
+  async function handleSplit() { await doAction(`/api/game/${roomId}/split`); chipSound() }
+  async function handleSurrender() { await doAction(`/api/game/${roomId}/surrender`) }
   async function handleInsurance(take: boolean) {
     await doAction(`/api/game/${roomId}/insurance`, { takeInsurance: take })
+    if (take) chipSound()
+    else insuranceSound()
   }
-
   async function handleNextRound() {
-    setLoading(true)
-    setError("")
+    setLoading(true); setError("")
     try {
       const res = await fetch(`/api/game/${roomId}/next-round`, { method: "POST" })
       const data = await res.json()
       if (data.success) {
         setGame(data.game)
-      } else {
-        setError(data.error)
-      }
-    } catch {
-      setError("Gagal mulai ronde baru")
-    } finally {
-      setLoading(false)
-    }
+        showToast("Ronde baru dimulai! 🃏", "info")
+        prevBalanceRef.current = null
+      } else setError(data.error)
+    } catch { setError("Gagal mulai ronde baru") }
+    finally { setLoading(false) }
   }
 
   async function handleUpdateSettings(settings: GameSettings) {
@@ -158,14 +214,9 @@ export default function RoomPage() {
         body: JSON.stringify({ settings, playerId }),
       })
       const data = await res.json()
-      if (data.success) {
-        setGame(data.game)
-      } else {
-        setError(data.error)
-      }
-    } catch {
-      setError("Gagal update settings")
-    }
+      if (data.success) setGame(data.game)
+      else setError(data.error)
+    } catch { setError("Gagal update settings") }
   }
 
   async function handleUpdateBet(bet: number) {
@@ -177,37 +228,24 @@ export default function RoomPage() {
         body: JSON.stringify({ playerId, amount: bet }),
       })
       const data = await res.json()
-      if (data.success) {
-        setGame(data.game)
-      } else {
-        setError(data.error)
-      }
-    } catch {
-      setError("Gagal update bet")
-    }
+      if (data.success) setGame(data.game)
+      else setError(data.error)
+    } catch { setError("Gagal update bet") }
   }
 
-  function handlePlayAgain() {
-    window.location.href = "/"
-  }
+  function handlePlayAgain() { window.location.href = "/" }
 
-  // ---- Derived state ----
+  // --- Derived state ---
   if (loading && !game) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center">
-        <div className="text-white text-xl animate-pulse">Loading...</div>
-      </div>
-    )
+    return <LoadingScreen text="Memuat Game..." />
   }
 
   if (error && !game) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 text-center">
-          <p className="text-red-600 font-semibold mb-4">{error}</p>
-          <button onClick={() => window.location.href = "/"} className="bg-green-600 text-white px-6 py-2 rounded-lg">
-            Kembali
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-[#0a1628] via-[#101d35] to-[#162a4a] flex items-center justify-center p-4">
+        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 text-center max-w-sm">
+          <p className="text-red-300 font-semibold mb-4">{error}</p>
+          <button onClick={() => window.location.href = "/"} className="bg-gold-500 text-black font-bold px-6 py-2 rounded-xl">Kembali</button>
         </div>
       </div>
     )
@@ -216,248 +254,196 @@ export default function RoomPage() {
   if (!game) return null
 
   const myPlayer = game.players.find((p) => p.id === playerId)
-  const isMyTurn = game.currentPlayerIndex < game.players.length &&
-    game.players[game.currentPlayerIndex]?.id === playerId
-
-  const currentHand = isMyTurn && myPlayer
-    ? getCurrentHand(myPlayer, game.currentHandIndex)
-    : null
-
+  const isMyTurn = !!(game.currentPlayerIndex < game.players.length &&
+    game.players[game.currentPlayerIndex]?.id === playerId)
+  const currentHand = isMyTurn && myPlayer ? getCurrentHand(myPlayer, game.currentHandIndex) : null
   const canDoSplit = currentHand ? canSplit(currentHand) : false
   const canDoDouble = currentHand ? canDoubleDown(currentHand) : false
   const canDoSurrender = currentHand ? canSurrender(currentHand) : false
   const canDoInsurance = myPlayer ? canTakeInsurance(game) : false
-  const needsInsuranceDecision = canDoInsurance && isMyTurn && myPlayer && !myPlayer.insuranceDecided
-
-  const isMyAction =
-    game.status === "playing" &&
-    isMyTurn &&
-    myPlayer &&
-    !currentHand?.isDone &&
-    !needsInsuranceDecision
-
+  const needsInsuranceDecision = !!(canDoInsurance && isMyTurn && myPlayer && !myPlayer.insuranceDecided)
+  const isMyAction = !!(game.status === "playing" && isMyTurn && myPlayer && !currentHand?.isDone && !needsInsuranceDecision)
   const isHost = myPlayer?.isHost ?? false
   const isFinished = game.status === "finished"
 
+  // Status label for header
+  let statusLabel = ""
+  if (game.status === "playing" && isMyTurn && !needsInsuranceDecision) {
+    statusLabel = "Giliranmu!"
+  } else if (game.status === "playing" && isMyTurn && needsInsuranceDecision) {
+    statusLabel = "Insurance?"
+  } else if (game.status === "playing") {
+    statusLabel = `Giliran: ${game.players[game.currentPlayerIndex]?.name}`
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
-      <div className="max-w-3xl mx-auto p-4">
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-6 mt-4">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">♠️ Blackjack ♥️</h1>
-            <div className="flex items-center gap-3">
-              {timeLeft !== null && isMyTurn && timeLeft > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className={`text-sm font-mono font-bold ${
-                    timeLeft <= 5 ? "text-red-600" : "text-gray-600"
-                  }`}>
-                    {timeLeft}s
-                  </div>
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        timeLeft <= 5 ? "bg-red-500" : "bg-green-500"
-                      }`}
-                      style={{ width: `${(timeLeft / (game.settings.turnTimeout || 30)) * 100}%` }}
+    <>
+      <Confetti trigger={confettiTrigger} />
+      {isFinished && <ResultOverlay game={game} myPlayerId={playerId} onNextRound={handleNextRound} onNewRoom={handlePlayAgain} />}
+
+      <GameLayout
+        game={game}
+        myPlayerId={playerId}
+        darkMode={darkMode}
+        onToggleDark={toggleDark}
+        timeLeft={timeLeft}
+        isMyTurn={isMyTurn && !isFinished}
+        statusLabel={statusLabel}
+        actionBar={
+          <ActionBar
+            game={game}
+            myPlayerId={playerId}
+            actionLoading={actionLoading}
+            needsInsuranceDecision={needsInsuranceDecision}
+            canDoSplit={canDoSplit}
+            canDoDouble={canDoDouble}
+            canDoSurrender={canDoSurrender}
+            isMyAction={isMyAction}
+            isMyTurn={isMyTurn}
+            canDoInsurance={canDoInsurance}
+            onHit={handleHit}
+            onStand={handleStand}
+            onDouble={handleDouble}
+            onSplit={handleSplit}
+            onSurrender={handleSurrender}
+            onInsurance={handleInsurance}
+          />
+        }
+      >
+        {/* Lobby */}
+        {game.status === "waiting" && (
+          <RoomLobby
+            room={{ id: roomId, code: game.code, game }}
+            playerId={playerId}
+            onStart={handleStart}
+            onUpdateSettings={handleUpdateSettings}
+            onUpdateBet={handleUpdateBet}
+          />
+        )}
+
+        {/* Game + Finished */}
+        {game.status !== "waiting" && (
+          <div className="space-y-4">
+            <GameBoard game={game} myPlayerId={playerId} />
+
+            {/* Finished: bet input + actions */}
+            {isFinished && (
+              <div className="space-y-3">
+                {/* Bet input */}
+                <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4">
+                  <label className="block text-xs font-medium text-white/50 mb-2 uppercase tracking-wider">
+                    Taruhan untuk ronde berikutnya
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={game.settings.minBet}
+                      max={Math.min(game.settings.maxBet, myPlayer?.balance || 0)}
+                      value={betInput}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || game.settings.minBet
+                        setBetInput(val)
+                        handleUpdateBet(val)
+                      }}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-center focus:outline-none focus:border-gold-500/50"
                     />
-                  </div>
-                </div>
-              )}
-              <div className="text-sm text-gray-500">
-                {isFinished && (
-                  <span className="text-green-600 font-medium">Game Selesai!</span>
-                )}
-                {game.status === "playing" && !isMyTurn && (
-                  <span className="text-yellow-600 font-medium">
-                    Giliran: {game.players[game.currentPlayerIndex]?.name}
-                  </span>
-                )}
-                {game.status === "playing" && isMyTurn && (
-                  <span className="text-green-600 font-medium">Giliranmu!</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {game.status === "waiting" && (
-            <RoomLobby
-              room={{ id: roomId, code: game.code, game }}
-              playerId={playerId}
-              onStart={handleStart}
-              onUpdateSettings={handleUpdateSettings}
-              onUpdateBet={handleUpdateBet}
-            />
-          )}
-
-          {game.status !== "waiting" && (
-            <>
-              <GameBoard game={game} myPlayerId={playerId} />
-
-              <div className="mt-6 space-y-3">
-                {/* Insurance prompt */}
-                {needsInsuranceDecision && (
-                  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
-                    <p className="text-yellow-800 font-bold mb-3">
-                      🛡️ Dealer menunjukkan Ace! Ambil Insurance?
-                    </p>
-                    <p className="text-sm text-yellow-700 mb-3">
-                      Biaya: {Math.floor((myPlayer?.totalBet || 0) / 2)} chip
-                      {myPlayer && ` (Saldo: ${myPlayer.balance})`}
-                    </p>
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        onClick={() => handleInsurance(true)}
-                        disabled={actionLoading}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Ya, Ambil Insurance
-                      </button>
-                      <button
-                        onClick={() => handleInsurance(false)}
-                        disabled={actionLoading}
-                        className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Skip
-                      </button>
+                    <div className="flex gap-1">
+                      {[
+                        { label: "+10", val: Math.min((betInput || 0) + 10, game.settings.maxBet, myPlayer?.balance || 99999) },
+                        { label: "+25", val: Math.min((betInput || 0) + 25, game.settings.maxBet, myPlayer?.balance || 99999) },
+                        { label: "Max", val: Math.min(game.settings.maxBet, myPlayer?.balance || 0) },
+                      ].map((btn) => (
+                        <button
+                          key={btn.label}
+                          onClick={() => {
+                            setBetInput(btn.val)
+                            handleUpdateBet(btn.val)
+                            buttonClick()
+                          }}
+                          disabled={btn.val < game.settings.minBet || btn.val > (myPlayer?.balance || 0)}
+                          className="px-2.5 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-white/70 rounded-lg transition-colors disabled:opacity-30 border border-white/10"
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                )}
-
-                {/* Insurance waiting */}
-                {canDoInsurance && !isMyTurn && !game.insuranceOffered && (
-                  <div className="text-center text-yellow-600 text-sm font-medium">
-                    Menunggu pemain lain memutuskan insurance...
-                  </div>
-                )}
-
-                {/* Main action buttons */}
-                {isMyAction && (
-                  <div className="flex flex-wrap gap-3 justify-center">
-                    <button
-                      onClick={handleHit}
-                      disabled={actionLoading}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-8 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Hit
-                    </button>
-                    <button
-                      onClick={handleStand}
-                      disabled={actionLoading}
-                      className="bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-8 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Stand
-                    </button>
-                    {canDoDouble && (
-                      <button
-                        onClick={handleDouble}
-                        disabled={actionLoading}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Double
-                      </button>
-                    )}
-                    {canDoSplit && (
-                      <button
-                        onClick={handleSplit}
-                        disabled={actionLoading}
-                        className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Split
-                      </button>
-                    )}
-                    {canDoSurrender && (
-                      <button
-                        onClick={handleSurrender}
-                        disabled={actionLoading}
-                        className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Surrender
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {game.status === "playing" && myPlayer && !isMyTurn && !needsInsuranceDecision && (
-                  <div className="text-center text-gray-500 font-medium">
-                    Tunggu giliranmu...
-                  </div>
-                )}
-
-                {game.status === "playing" && isMyTurn && currentHand?.isDone && !needsInsuranceDecision && (
-                  <div className="text-center text-blue-600 font-medium">
-                    Kamu sudah done. Tunggu pemain lain...
-                  </div>
-                )}
-
-                {isFinished && (
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      onClick={handleNextRound}
-                      disabled={loading}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-8 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Ronde Selanjutnya
-                    </button>
-                    <button
-                      onClick={handlePlayAgain}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-8 rounded-lg transition-colors"
-                    >
-                      Main Lagi (Room Baru)
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-              {error}
-            </div>
-          )}
-        </div>
-
-        {myPlayer && isFinished && (
-          <div className="bg-white/80 backdrop-blur rounded-2xl shadow-xl p-4 mt-4">
-            <h4 className="font-bold text-gray-700 mb-2 text-sm">📊 Statistik {myPlayer.name}</h4>
-            <div className="grid grid-cols-4 gap-2 text-xs text-center">
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="font-bold text-gray-900">{myPlayer.stats.totalGames}</div>
-                <div className="text-gray-500">Games</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-2">
-                <div className="font-bold text-green-700">{myPlayer.stats.totalWins}</div>
-                <div className="text-green-600">Win</div>
-              </div>
-              <div className="bg-red-50 rounded-lg p-2">
-                <div className="font-bold text-red-700">{myPlayer.stats.totalLosses}</div>
-                <div className="text-red-600">Lose</div>
-              </div>
-              <div className="bg-yellow-50 rounded-lg p-2">
-                <div className="font-bold text-yellow-700">{myPlayer.stats.blackjackCount}</div>
-                <div className="text-yellow-600">BJ</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-center">
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="font-bold text-gray-900">{myPlayer.stats.totalPushes}</div>
-                <div className="text-gray-500">Push</div>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-2">
-                <div className={`font-bold ${myPlayer.stats.currentStreak >= 0 ? "text-green-700" : "text-red-700"}`}>
-                  {myPlayer.stats.currentStreak}
                 </div>
-                <div className="text-gray-500">Streak</div>
-              </div>
-            </div>
-            {myPlayer.stats.bestWinStreak > 0 && (
-              <div className="text-xs text-center text-gray-400 mt-1">
-                Best Win Streak: {myPlayer.stats.bestWinStreak}
+
+                {/* Next round / New room */}
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={handleNextRound}
+                    disabled={loading || !isHost}
+                    className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 disabled:bg-white/10 disabled:cursor-not-allowed text-black disabled:text-white/30 font-bold py-3 px-6 rounded-xl transition-all active:scale-95 shadow-lg"
+                  >
+                    <Play size={18} />
+                    Ronde Selanjutnya
+                  </button>
+                  <button
+                    onClick={handlePlayAgain}
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 border border-white/10"
+                  >
+                    <Plus size={18} />
+                    Room Baru
+                  </button>
+                </div>
+
+                {/* Stats */}
+                {myPlayer && (
+                  <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4">
+                    <h4 className="font-bold text-white/60 text-xs mb-2 flex items-center gap-1 uppercase tracking-wider">
+                      <BarChart3 size={12} /> Statistik {myPlayer.name}
+                    </h4>
+                    <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                      <div className="bg-white/5 rounded-lg p-2">
+                        <div className="font-bold text-white font-mono">{myPlayer.stats.totalGames}</div>
+                        <div className="text-white/40 text-[10px] uppercase">Games</div>
+                      </div>
+                      <div className="bg-emerald-500/10 rounded-lg p-2">
+                        <div className="font-bold text-emerald-400 font-mono">{myPlayer.stats.totalWins}</div>
+                        <div className="text-emerald-400/60 text-[10px] uppercase">Win</div>
+                      </div>
+                      <div className="bg-red-500/10 rounded-lg p-2">
+                        <div className="font-bold text-red-400 font-mono">{myPlayer.stats.totalLosses}</div>
+                        <div className="text-red-400/60 text-[10px] uppercase">Lose</div>
+                      </div>
+                      <div className="bg-gold-500/10 rounded-lg p-2">
+                        <div className="font-bold text-gold-400 font-mono">{myPlayer.stats.blackjackCount}</div>
+                        <div className="text-gold-400/60 text-[10px] uppercase">BJ</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-center">
+                      <div className="bg-white/5 rounded-lg p-2">
+                        <div className="font-bold text-white font-mono">{myPlayer.stats.totalPushes}</div>
+                        <div className="text-white/40 text-[10px] uppercase">Push</div>
+                      </div>
+                      <div className="bg-blue-500/10 rounded-lg p-2">
+                        <div className={`font-bold font-mono ${myPlayer.stats.currentStreak >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {myPlayer.stats.currentStreak}
+                        </div>
+                        <div className="text-white/40 text-[10px] uppercase">Streak</div>
+                      </div>
+                    </div>
+                    {myPlayer.stats.bestWinStreak > 0 && (
+                      <div className="text-[10px] text-center text-white/30 mt-1">
+                        Best Win Streak: {myPlayer.stats.bestWinStreak}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
-      </div>
-    </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mt-4 bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3">
+            {error}
+          </div>
+        )}
+      </GameLayout>
+    </>
   )
 }

@@ -99,15 +99,15 @@ export function playDealerTurn(deck: Card[], dealerHand: Card[]): void {
 
 function calculatePayout(type: HandResultType, bet: number): number {
   switch (type) {
-    case "blackjack_win": return Math.floor(bet * 1.5)
+    case "blackjack_win": return bet + Math.floor(bet * 1.5)
     case "player_win":
-    case "dealer_bust": return bet
+    case "dealer_bust": return bet * 2
     case "push":
-    case "blackjack_push": return 0
-    case "surrender": return -Math.floor(bet / 2)
+    case "blackjack_push": return bet
+    case "surrender": return Math.floor(bet / 2)
     case "player_bust":
     case "dealer_win":
-    default: return -bet
+    default: return 0
   }
 }
 
@@ -121,7 +121,7 @@ export function determineWinner(
       if (hand.isSurrendered) {
         hand.result = {
           type: "surrender",
-          message: `${player.name} surrender (-${hand.bet / 2})`,
+          message: `${player.name} Surrender -${Math.floor(hand.bet / 2)}`,
           payout: calculatePayout("surrender", hand.bet),
         }
         continue
@@ -133,25 +133,25 @@ export function determineWinner(
       if (ps > 21) {
         hand.result = {
           type: "player_bust",
-          message: `${player.name} Bust!`,
+          message: `${player.name} Bust! -${hand.bet}`,
           payout: calculatePayout("player_bust", hand.bet),
         }
       } else if (ds > 21) {
         hand.result = {
           type: "dealer_bust",
-          message: `Dealer Bust! ${player.name} Win!`,
+          message: `Dealer Bust! ${player.name} Win! +${hand.bet}`,
           payout: calculatePayout("dealer_bust", hand.bet),
         }
-      } else if (dealerBlackjack && hand.cards.length === 2 && ps === 21) {
+      } else if (dealerBlackjack && ps === 21) {
         hand.result = {
           type: "blackjack_push",
-          message: `${player.name}: Both Blackjack! Push`,
+          message: `${player.name}: Both Blackjack! Push 0`,
           payout: calculatePayout("blackjack_push", hand.bet),
         }
       } else if (dealerBlackjack) {
         hand.result = {
           type: "dealer_win",
-          message: `Dealer Blackjack! ${player.name} Lose`,
+          message: `Dealer Blackjack! ${player.name} Lose -${hand.bet}`,
           payout: calculatePayout("dealer_win", hand.bet),
         }
       } else if (ps === 21 && hand.cards.length === 2) {
@@ -169,13 +169,13 @@ export function determineWinner(
       } else if (ps === ds) {
         hand.result = {
           type: "push",
-          message: `${player.name}: Push (${ps})`,
+          message: `${player.name}: Push (${ps}) 0`,
           payout: calculatePayout("push", hand.bet),
         }
       } else {
         hand.result = {
           type: "dealer_win",
-          message: `${player.name} Lose (${ps} vs ${ds})`,
+          message: `${player.name} Lose -${hand.bet}`,
           payout: calculatePayout("dealer_win", hand.bet),
         }
       }
@@ -186,9 +186,9 @@ export function determineWinner(
 function processInsurancePayout(player: Player, dealerHasBlackjack: boolean): number {
   if (player.insuranceBet === 0) return 0
   if (dealerHasBlackjack) {
-    return player.insuranceBet
+    return player.insuranceBet * 3
   }
-  return -player.insuranceBet
+  return 0
 }
 
 export function runDealerSequence(

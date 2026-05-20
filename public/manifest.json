@@ -1,0 +1,16 @@
+{
+  "name": "Blackjack Online",
+  "short_name": "Blackjack",
+  "description": "Main Blackjack bareng temen-temen!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

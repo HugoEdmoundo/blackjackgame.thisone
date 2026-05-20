@@ -34,9 +34,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     hand.isSurrendered = true
     hand.isDone = true
 
-    const refund = Math.floor(hand.bet / 2)
-    player.balance += refund
-
     room.game.currentHandIndex++
     while (
       room.game.currentHandIndex < player.hands.length &&

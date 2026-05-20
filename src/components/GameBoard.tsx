@@ -1,7 +1,6 @@
-import { GameState } from "@/lib/types"
-import PlayerHand from "./PlayerHand"
-import Card from "./Card"
-import { canTakeInsurance } from "@/lib/game"
+import type { GameState } from "@/lib/types"
+import DealerArea from "./DealerArea"
+import PlayerSpot from "./PlayerSpot"
 
 export default function GameBoard({ game, myPlayerId }: { game: GameState; myPlayerId: string }) {
   if (!game) return null
@@ -11,55 +10,34 @@ export default function GameBoard({ game, myPlayerId }: { game: GameState; myPla
     ? game.players[game.currentPlayerIndex]
     : null
   const isMyTurn = currentPlayer?.id === myPlayerId && !isFinished
-  const insuranceAvailable = canTakeInsurance(game)
 
   return (
-    <div className="space-y-6">
-      <div className="bg-green-800 rounded-xl p-4 border-2 border-green-600">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-white font-bold">Dealer</h3>
-          {isFinished && (
-            <span className="text-white/80 text-sm font-mono">
-              Score: {game.dealerScore}
-            </span>
-          )}
+    <div className="space-y-4 sm:space-y-6">
+      {/* Dealer area */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-lg">
+          <DealerArea game={game} />
         </div>
-        <div className="flex gap-1.5">
-          {game.dealerHand.length === 0 ? (
-            <span className="text-green-300 italic text-sm">Menunggu...</span>
-          ) : (
-            game.dealerHand.map((card, i) => (
-              <Card key={i} card={card} hidden={!isFinished && i === 0} />
-            ))
-          )}
-        </div>
-        {insuranceAvailable && isMyTurn && (
-          <div className="mt-2 bg-yellow-100 border border-yellow-300 rounded-lg px-3 py-2 text-sm text-yellow-800">
-            🛡️ Dealer menunjukkan Ace! Insurance tersedia.
-          </div>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Divider with glow */}
+      <div className="relative flex items-center justify-center">
+        <div className="w-32 h-px bg-gradient-to-r from-transparent via-gold-500/20 to-transparent" />
+      </div>
+
+      {/* Player spots */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {game.players.map((player) => (
-          <PlayerHand
+          <PlayerSpot
             key={player.id}
             player={player}
             isCurrentTurn={player.id === currentPlayer?.id && !isFinished}
             isFinished={isFinished}
             currentHandIndex={player.id === currentPlayer?.id ? game.currentHandIndex : 0}
+            isMe={player.id === myPlayerId}
           />
         ))}
       </div>
-
-      {isFinished && game.players.length > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <h4 className="font-bold text-gray-700 mb-2">📊 Ringkasan</h4>
-          <div className="space-y-1 text-sm">
-            <p className="text-gray-600">Round: {game.round} | Dek sisa: {game.deck.length} kartu</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
