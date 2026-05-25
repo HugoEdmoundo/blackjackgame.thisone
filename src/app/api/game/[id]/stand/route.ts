@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { hasPlayerDoneAllHands } from "@/lib/game"
+import { getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const player = room.game.players[playerIdx]
-    const hand = player.hands[room.game.currentHandIndex]
+    const hand = getCurrentHand(player, room.game.currentHandIndex)
     if (hand) hand.isDone = true
 
     room.game.currentHandIndex++

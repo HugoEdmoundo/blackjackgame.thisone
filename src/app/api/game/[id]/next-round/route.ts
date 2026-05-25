@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { createDeck, dealInitialCards, createInitialHand } from "@/lib/game"
+import { createDeck, dealInitialCards, createInitialHand, dealerHasBlackjack } from "@/lib/game"
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const { playerId } = await req.json()
     const room = await kv.get(id)
 
     if (!room) {
       return NextResponse.json({ success: false, error: "Room tidak ditemukan" }, { status: 404 })
+    }
+
+    const player = room.game.players.find((p) => p.id === playerId)
+    if (!player?.isHost) {
+      return NextResponse.json({ success: false, error: "Hanya host yang bisa mulai ronde baru" }, { status: 403 })
     }
 
     if (room.game.status !== "finished") {
@@ -25,7 +31,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const deck = createDeck()
     room.game.deck = deck
-    room.game.dealerHand = []
+    const dealerHand: import("@/lib/types").Card[] = []
+    const d1 = deck.pop()
+    const d2 = deck.pop()
+    if (d1 && d2) dealerHand.push(d1, d2)
+    room.game.dealerHand = dealerHand
     room.game.dealerScore = 0
     room.game.currentPlayerIndex = 0
     room.game.currentHandIndex = 0
@@ -33,6 +43,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     room.game.insuranceOffered = false
     room.game.dealerBlackjack = false
     room.game.turnStartedAt = Date.now()
+
+    if (dealerHasBlackjack(dealerHand)) {
+      room.game.dealerBlackjack = true
+    }
 
     const rawHands = dealInitialCards(deck, alivePlayers.length)
     const updatedPlayers = alivePlayers.map((p, i) => {

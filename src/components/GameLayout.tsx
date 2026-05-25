@@ -1,4 +1,4 @@
-import { Sun, Moon, CheckCircle } from "lucide-react"
+import { Sun, Moon, CheckCircle, LogOut } from "lucide-react"
 import type { GameState } from "@/lib/types"
 
 export default function GameLayout({
@@ -7,6 +7,7 @@ export default function GameLayout({
   myPlayerId,
   darkMode,
   onToggleDark,
+  onLeave,
   actionBar,
   timeLeft,
   isMyTurn,
@@ -17,6 +18,7 @@ export default function GameLayout({
   myPlayerId: string
   darkMode: boolean
   onToggleDark: () => void
+  onLeave?: () => void
   actionBar?: React.ReactNode
   timeLeft: number | null
   isMyTurn: boolean
@@ -30,7 +32,7 @@ export default function GameLayout({
       <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-[#0a1628]/80 backdrop-blur-md z-30">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-lg sm:text-xl text-[#d4af37] tracking-wide">
-            ♠ Blackjack ♥
+            Blackjack
           </h1>
           {game.status !== "waiting" && (
             <div className="hidden sm:flex items-center gap-2 text-[11px] text-white/30 font-mono">
@@ -67,6 +69,15 @@ export default function GameLayout({
             </span>
           ) : null}
 
+          {onLeave && (
+            <button
+              onClick={onLeave}
+              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors text-red-400 hover:text-red-300"
+              title="Keluar Room"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
           <button
             onClick={onToggleDark}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] transition-colors text-white/50 hover:text-white"

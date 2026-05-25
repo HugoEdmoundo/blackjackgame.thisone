@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Room tidak ditemukan" }, { status: 404 })
     }
 
-    if (room.game.status !== "waiting") {
-      return NextResponse.json({ success: false, error: "Game sudah dimulai" }, { status: 400 })
+    if (room.game.status === "playing") {
+      return NextResponse.json({ success: false, error: "Game sedang berlangsung" }, { status: 400 })
     }
 
     if (room.game.players.length >= room.game.settings.maxPlayers) {

@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
 import { createDeck, dealInitialCards, createInitialHand, dealerHasBlackjack } from "@/lib/game"
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const { playerId } = await req.json()
     const room = await kv.get(id)
 
     if (!room) {
       return NextResponse.json({ success: false, error: "Room tidak ditemukan" }, { status: 404 })
+    }
+
+    const player = room.game.players.find((p) => p.id === playerId)
+    if (!player?.isHost) {
+      return NextResponse.json({ success: false, error: "Hanya host yang bisa memulai game" }, { status: 403 })
     }
 
     if (room.game.status !== "waiting") {

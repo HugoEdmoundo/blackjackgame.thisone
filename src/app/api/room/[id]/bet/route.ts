@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Room tidak ditemukan" }, { status: 404 })
     }
 
-    if (room.game.status !== "waiting") {
+    if (room.game.status === "playing") {
       return NextResponse.json({ success: false, error: "Tidak bisa ubah bet saat game berjalan" }, { status: 400 })
     }
 

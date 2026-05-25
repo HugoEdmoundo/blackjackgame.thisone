@@ -25,7 +25,6 @@ declare module "lucide-react" {
   export const RefreshCw: Icon
   export const Scissors: Icon
   export const Flag: Icon
-  export const Clock: Icon
   export const Wallet: Icon
   export const BarChart3: Icon
   export const Plus: Icon
@@ -46,4 +45,5 @@ declare module "lucide-react" {
   export const Copy: Icon
   export const Check: Icon
   export const Users: Icon
+  export const LogOut: Icon
 }

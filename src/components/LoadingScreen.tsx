@@ -8,15 +8,15 @@ export default function LoadingScreen({ text = "Loading..." }: { text?: string }
         <div className="flex gap-4 items-center">
           <div className="w-14 h-20 bg-gradient-to-br from-blue-700 to-blue-600 rounded-xl border-2 border-gold-400/30 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite" }}>
-            <span className="text-2xl text-gold-300 font-bold">♠</span>
+            <span className="text-2xl text-gold-300 font-bold">?</span>
           </div>
           <div className="w-14 h-20 bg-white rounded-xl border-2 border-gold-400/60 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite 0.4s" }}>
-            <span className="text-2xl text-red-500">♥</span>
+            <span className="text-2xl text-red-500">?</span>
           </div>
           <div className="w-14 h-20 bg-gradient-to-br from-blue-700 to-blue-600 rounded-xl border-2 border-gold-400/30 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite 0.8s" }}>
-            <span className="text-2xl text-gold-300 font-bold">♦</span>
+            <span className="text-2xl text-gold-300 font-bold">?</span>
           </div>
         </div>
 

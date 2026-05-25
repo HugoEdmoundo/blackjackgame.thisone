@@ -169,7 +169,7 @@ export default function PlayerSpot({
               totalHands={player.hands.length}
               isActive={isActive}
               isFinished={isFinished}
-              isCurrentHand={hIdx === currentHandIndex && player.id === player.id}
+              isCurrentHand={hIdx === currentHandIndex}
             />
           ))}
         </div>

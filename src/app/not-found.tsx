@@ -1,19 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-
-const suits = ["♠", "♥", "♣", "♦"]
+import { ArrowLeft, Sparkles } from "lucide-react"
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-table via-table-secondary to-table-accent flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Floating suits */}
+      {/* Floating decorations */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        {suits.map((suit, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="absolute text-6xl opacity-[0.03] select-none"
+            className="absolute opacity-[0.04] select-none text-gold-400"
             style={{
               top: `${20 + Math.random() * 60}%`,
               left: `${10 + Math.random() * 80}%`,
@@ -21,7 +19,7 @@ export default function NotFound() {
               animation: `float ${3 + Math.random() * 2}s ease-in-out infinite ${i * 0.5}s`,
             }}
           >
-            {suit}
+            <Sparkles size={48} />
           </div>
         ))}
       </div>
@@ -39,15 +37,15 @@ export default function NotFound() {
           <div className="flex justify-center gap-2 mt-2">
             <div className="w-10 h-14 bg-white rounded-lg border-2 border-gold-400/60 flex items-center justify-center shadow-lg"
               style={{ animation: "float 2.5s ease-in-out infinite" }}>
-              <span className="text-lg text-red-500">♥</span>
+              <span className="text-lg text-red-500">?</span>
             </div>
             <div className="w-10 h-14 bg-white rounded-lg border-2 border-gold-400/60 flex items-center justify-center shadow-lg"
               style={{ animation: "float 2.5s ease-in-out infinite 0.5s" }}>
-              <span className="text-lg text-gray-900">♠</span>
+              <span className="text-lg text-gray-900 dark:text-gray-300">?</span>
             </div>
             <div className="w-10 h-14 bg-white rounded-lg border-2 border-gold-400/60 flex items-center justify-center shadow-lg"
               style={{ animation: "float 2.5s ease-in-out infinite 1s" }}>
-              <span className="text-lg text-red-500">♦</span>
+              <span className="text-lg text-red-500">?</span>
             </div>
           </div>
         </div>

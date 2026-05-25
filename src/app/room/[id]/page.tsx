@@ -173,7 +173,11 @@ export default function RoomPage() {
   async function handleStart() {
     setLoading(true); setError("")
     try {
-      const res = await fetch(`/api/game/${roomId}/start`, { method: "POST" })
+      const res = await fetch(`/api/game/${roomId}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      })
       const data = await res.json()
       if (data.success) setGame(data.game)
       else setError(data.error)
@@ -194,15 +198,38 @@ export default function RoomPage() {
   async function handleNextRound() {
     setLoading(true); setError("")
     try {
-      const res = await fetch(`/api/game/${roomId}/next-round`, { method: "POST" })
+      const res = await fetch(`/api/game/${roomId}/next-round`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      })
       const data = await res.json()
       if (data.success) {
         setGame(data.game)
-        showToast("Ronde baru dimulai! 🃏", "info")
+        showToast("Ronde baru dimulai!", "info")
         prevBalanceRef.current = null
       } else setError(data.error)
     } catch { setError("Gagal mulai ronde baru") }
     finally { setLoading(false) }
+  }
+
+  async function handleLeave() {
+    if (!confirm("Yakin mau keluar room?")) return
+    try {
+      const res = await fetch(`/api/room/${roomId}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      })
+      const data = await res.json()
+      if (data.success || data.deleted) {
+        window.location.href = "/"
+      } else {
+        showToast(data.error || "Gagal keluar", "error")
+      }
+    } catch {
+      showToast("Gagal keluar room", "error")
+    }
   }
 
   async function handleUpdateSettings(settings: GameSettings) {
@@ -286,6 +313,7 @@ export default function RoomPage() {
         myPlayerId={playerId}
         darkMode={darkMode}
         onToggleDark={toggleDark}
+        onLeave={handleLeave}
         timeLeft={timeLeft}
         isMyTurn={isMyTurn && !isFinished}
         statusLabel={statusLabel}
