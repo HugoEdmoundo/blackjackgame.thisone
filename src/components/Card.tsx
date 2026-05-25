@@ -34,11 +34,18 @@ export default function Card({ card, hidden, index = 0, glow }: { card: CardType
           animation: `cardDeal 0.35s ease-out ${index * 0.08}s both`,
         }}
       >
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#d4af37]/30 flex items-center justify-center">
-            <span className="text-lg sm:text-xl text-[#d4af37] font-bold">?</span>
+        <div className="flex items-center justify-center w-full h-full">
+          <div className="grid grid-cols-3 gap-0.5 rotate-45 scale-75 sm:scale-100">
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♠</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♥</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♦</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♣</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♠</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♥</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♦</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♣</span>
+            <span className="text-[5px] sm:text-[7px] text-[#d4af37]/60">♠</span>
           </div>
-          <div className="w-10 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37]/30 to-transparent" />
         </div>
       </div>
     )

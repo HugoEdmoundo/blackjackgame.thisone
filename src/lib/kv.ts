@@ -39,14 +39,37 @@ class InMemoryStore implements Store {
   }
 }
 
-async function createRedisStore(): Promise<Store> {
-  const { Redis } = await import("@upstash/redis")
-  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
+function resolveRedisUrl(): { url: string; token: string } {
+  // Prefer KV_REST_API_URL if set (https:// format)
+  if (process.env.KV_REST_API_URL) {
+    return {
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN || "",
+    }
+  }
+
+  const rawUrl = process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || ""
 
-  if (!url) {
-    throw new Error("KV_URL is not set")
+  if (!rawUrl) {
+    throw new Error("No KV/REDIS URL environment variable set")
   }
+
+  // KV_URL from Vercel is in rediss://default:pass@host:port format.
+  // @upstash/redis requires https://host:port.
+  if (rawUrl.startsWith("rediss://") || rawUrl.startsWith("redis://")) {
+    const parsed = new URL(rawUrl)
+    const host = parsed.hostname || parsed.host
+    const port = parsed.port || "443"
+    return { url: `https://${host}:${port}`, token }
+  }
+
+  return { url: rawUrl, token }
+}
+
+async function createRedisStore(): Promise<Store> {
+  const { Redis } = await import("@upstash/redis")
+  const { url, token } = resolveRedisUrl()
 
   const redis = new Redis({ url, token })
 

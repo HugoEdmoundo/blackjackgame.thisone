@@ -8,15 +8,38 @@ export default function LoadingScreen({ text = "Loading..." }: { text?: string }
         <div className="flex gap-4 items-center">
           <div className="w-14 h-20 bg-gradient-to-br from-blue-700 to-blue-600 rounded-xl border-2 border-gold-400/30 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite" }}>
-            <span className="text-2xl text-gold-300 font-bold">?</span>
+            <div className="grid grid-cols-3 gap-[1px] rotate-45 scale-75">
+              <span className="text-[5px] text-gold-300/60">♠</span>
+              <span className="text-[5px] text-gold-300/60">♥</span>
+              <span className="text-[5px] text-gold-300/60">♦</span>
+              <span className="text-[5px] text-gold-300/60">♣</span>
+              <span className="text-[5px] text-gold-300/60">♠</span>
+              <span className="text-[5px] text-gold-300/60">♥</span>
+              <span className="text-[5px] text-gold-300/60">♦</span>
+              <span className="text-[5px] text-gold-300/60">♣</span>
+              <span className="text-[5px] text-gold-300/60">♠</span>
+            </div>
           </div>
           <div className="w-14 h-20 bg-white rounded-xl border-2 border-gold-400/60 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite 0.4s" }}>
-            <span className="text-2xl text-red-500">?</span>
+            <div className="flex flex-col items-center leading-none">
+              <span className="text-base font-bold font-mono text-red-500">A</span>
+              <span className="text-lg text-red-500">♥</span>
+            </div>
           </div>
           <div className="w-14 h-20 bg-gradient-to-br from-blue-700 to-blue-600 rounded-xl border-2 border-gold-400/30 flex items-center justify-center shadow-xl"
             style={{ animation: "loadingCardFlip 1.2s ease-in-out infinite 0.8s" }}>
-            <span className="text-2xl text-gold-300 font-bold">?</span>
+            <div className="grid grid-cols-3 gap-[1px] rotate-45 scale-75">
+              <span className="text-[5px] text-gold-300/60">♠</span>
+              <span className="text-[5px] text-gold-300/60">♥</span>
+              <span className="text-[5px] text-gold-300/60">♦</span>
+              <span className="text-[5px] text-gold-300/60">♣</span>
+              <span className="text-[5px] text-gold-300/60">♠</span>
+              <span className="text-[5px] text-gold-300/60">♥</span>
+              <span className="text-[5px] text-gold-300/60">♦</span>
+              <span className="text-[5px] text-gold-300/60">♣</span>
+              <span className="text-[5px] text-gold-300/60">♠</span>
+            </div>
           </div>
         </div>
 

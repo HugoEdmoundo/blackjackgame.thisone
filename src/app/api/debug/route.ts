@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, STARTING_BALANCE } from "@/lib/types"
 export async function GET() {
   const env = {
     KV_URL: process.env.KV_URL ? "SET (" + process.env.KV_URL.slice(0, 20) + "...)" : "NOT SET",
+    KV_REST_API_URL: process.env.KV_REST_API_URL ? "SET" : "NOT SET",
     KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN ? "SET" : "NOT SET",
     REDIS_URL: process.env.REDIS_URL ? "SET" : "NOT SET",
     NODE_ENV: process.env.NODE_ENV,
