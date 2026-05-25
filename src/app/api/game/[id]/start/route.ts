@@ -25,6 +25,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Minimal 2 pemain" }, { status: 400 })
     }
 
+    if (!room.game.settingsConfigured) {
+      return NextResponse.json({ success: false, error: "Atur pengaturan room terlebih dahulu" }, { status: 400 })
+    }
+
     const deck = createDeck()
 
     const dealerHand: import("@/lib/types").Card[] = []

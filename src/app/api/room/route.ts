@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         turnStartedAt: 0,
         insuranceOffered: false,
         dealerBlackjack: false,
+        settingsConfigured: false,
       },
     }
 

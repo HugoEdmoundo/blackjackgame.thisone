@@ -64,8 +64,51 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (hand.score === 21) {
       hand.isDone = true
     }
+    if (newHand.score === 21) {
+      newHand.isDone = true
+    }
 
-    room.game.turnStartedAt = Date.now()
+    // Advance currentHandIndex past any done hands
+    room.game.currentHandIndex++
+    while (
+      room.game.currentHandIndex < player.hands.length &&
+      player.hands[room.game.currentHandIndex].isDone
+    ) {
+      room.game.currentHandIndex++
+    }
+
+    // If player has finished all hands, advance to next player
+    if (hasPlayerDoneAllHands(player)) {
+      room.game.currentPlayerIndex++
+      room.game.currentHandIndex = 0
+
+      while (
+        room.game.currentPlayerIndex < room.game.players.length &&
+        hasPlayerDoneAllHands(room.game.players[room.game.currentPlayerIndex])
+      ) {
+        room.game.currentPlayerIndex++
+        room.game.currentHandIndex = 0
+      }
+
+      // If all players are done, run dealer sequence
+      if (room.game.currentPlayerIndex >= room.game.players.length) {
+        const { runDealerSequence } = await import("@/lib/game")
+        const result = runDealerSequence(
+          room.game.deck,
+          room.game.players,
+          room.game.dealerHand,
+          room.game.dealerBlackjack
+        )
+        room.game.dealerHand = result.dealerHand
+        room.game.dealerScore = result.dealerScore
+        room.game.players = result.players
+        room.game.status = "finished"
+      } else {
+        room.game.turnStartedAt = Date.now()
+      }
+    } else {
+      room.game.turnStartedAt = Date.now()
+    }
     await kv.set(room.id, room)
 
     return NextResponse.json({ success: true, game: room.game })

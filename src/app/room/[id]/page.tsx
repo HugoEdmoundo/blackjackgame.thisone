@@ -117,7 +117,9 @@ export default function RoomPage() {
       const myP = game.players.find((p) => p.id === playerId)
       const isMyTurn = game.currentPlayerIndex < game.players.length &&
         game.players[game.currentPlayerIndex]?.id === playerId
-      if (isMyTurn && myP) {
+      // Don't start timer if insurance is pending
+      const canTakeInsuranceNow = myP ? canTakeInsurance(game) : false
+      if (isMyTurn && myP && !canTakeInsuranceNow) {
         timerRef.current = setInterval(() => {
           const elapsed = Math.floor((Date.now() - game.turnStartedAt) / 1000)
           const remaining = Math.max(0, game.settings.turnTimeout - elapsed)
@@ -134,7 +136,7 @@ export default function RoomPage() {
       setTimeLeft(null)
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [game?.status, game?.turnStartedAt, game?.currentPlayerIndex, game?.currentHandIndex])
+  }, [game?.status, game?.turnStartedAt, game?.currentPlayerIndex, game?.currentHandIndex, game?.insuranceOffered, game?.dealerHand])
 
   // Sync bet input
   useEffect(() => {
@@ -271,8 +273,8 @@ export default function RoomPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a1628] via-[#101d35] to-[#162a4a] flex items-center justify-center p-4">
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 text-center max-w-sm">
-          <p className="text-red-300 font-semibold mb-4">{error}</p>
-          <button onClick={() => window.location.href = "/"} className="bg-gold-500 text-black font-bold px-6 py-2 rounded-xl">Kembali</button>
+          <p className="text-red-300 font-semibold mb-4" role="alert">{error}</p>
+          <button onClick={() => window.location.href = "/"} className="bg-gold-500 text-black font-bold px-6 py-2 rounded-xl" aria-label="Kembali ke halaman utama">Kembali</button>
         </div>
       </div>
     )
@@ -287,9 +289,9 @@ export default function RoomPage() {
   const canDoSplit = currentHand ? canSplit(currentHand) : false
   const canDoDouble = currentHand ? canDoubleDown(currentHand) : false
   const canDoSurrender = currentHand ? canSurrender(currentHand) : false
-  const canDoInsurance = myPlayer ? canTakeInsurance(game) : false
-  const needsInsuranceDecision = !!(canDoInsurance && isMyTurn && myPlayer && !myPlayer.insuranceDecided)
-  const isMyAction = !!(game.status === "playing" && isMyTurn && myPlayer && !currentHand?.isDone && !needsInsuranceDecision)
+   const canDoInsurance = myPlayer ? canTakeInsurance(game) : false
+   const needsInsuranceDecision = !!(canDoInsurance && myPlayer && !myPlayer.insuranceDecided)
+   const isMyAction = !!(game.status === "playing" && isMyTurn && myPlayer && !currentHand?.isDone && !needsInsuranceDecision && !canDoInsurance)
   const isHost = myPlayer?.isHost ?? false
   const isFinished = game.status === "finished"
 
@@ -358,12 +360,13 @@ export default function RoomPage() {
             {isFinished && (
               <div className="space-y-3">
                 {/* Bet input */}
-                <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4">
-                  <label className="block text-xs font-medium text-white/50 mb-2 uppercase tracking-wider">
+                <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4" role="region" aria-label="Atur taruhan">
+                  <label htmlFor="next-round-bet" className="block text-xs font-medium text-white/50 mb-2 uppercase tracking-wider">
                     Taruhan untuk ronde berikutnya
                   </label>
                   <div className="flex items-center gap-2">
                     <input
+                      id="next-round-bet"
                       type="number"
                       min={game.settings.minBet}
                       max={Math.min(game.settings.maxBet, myPlayer?.balance || 0)}
@@ -375,7 +378,7 @@ export default function RoomPage() {
                       }}
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-center focus:outline-none focus:border-gold-500/50"
                     />
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" role="group" aria-label="Tambah taruhan cepat">
                       {[
                         { label: "+10", val: Math.min((betInput || 0) + 10, game.settings.maxBet, myPlayer?.balance || 99999) },
                         { label: "+25", val: Math.min((betInput || 0) + 25, game.settings.maxBet, myPlayer?.balance || 99999) },
@@ -389,6 +392,7 @@ export default function RoomPage() {
                             buttonClick()
                           }}
                           disabled={btn.val < game.settings.minBet || btn.val > (myPlayer?.balance || 0)}
+                          aria-label={`Tambah taruhan ${btn.label}`}
                           className="px-2.5 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-white/70 rounded-lg transition-colors disabled:opacity-30 border border-white/10"
                         >
                           {btn.label}
@@ -403,6 +407,7 @@ export default function RoomPage() {
                   <button
                     onClick={handleNextRound}
                     disabled={loading || !isHost}
+                    aria-label="Mulai ronde selanjutnya"
                     className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 disabled:bg-white/10 disabled:cursor-not-allowed text-black disabled:text-white/30 font-bold py-3 px-6 rounded-xl transition-all active:scale-95 shadow-lg"
                   >
                     <Play size={18} />
@@ -410,6 +415,7 @@ export default function RoomPage() {
                   </button>
                   <button
                     onClick={handlePlayAgain}
+                    aria-label="Buat room baru"
                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 border border-white/10"
                   >
                     <Plus size={18} />
@@ -419,7 +425,7 @@ export default function RoomPage() {
 
                 {/* Stats */}
                 {myPlayer && (
-                  <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4">
+                  <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-xl p-4" role="region" aria-label={`Statistik ${myPlayer.name}`}>
                     <h4 className="font-bold text-white/60 text-xs mb-2 flex items-center gap-1 uppercase tracking-wider">
                       <BarChart3 size={12} /> Statistik {myPlayer.name}
                     </h4>
@@ -467,7 +473,7 @@ export default function RoomPage() {
 
         {/* Error */}
         {error && (
-          <div className="mt-4 bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3">
+          <div className="mt-4 bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3" role="alert">
             {error}
           </div>
         )}

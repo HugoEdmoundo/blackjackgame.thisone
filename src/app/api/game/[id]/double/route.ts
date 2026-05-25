@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { calculateHand, getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
+import { calculateHand, getCurrentHand, hasPlayerDoneAllHands, canTakeInsurance } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,7 +31,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Hand tidak ditemukan" }, { status: 400 })
     }
 
-    if (hand.cards.length !== 2 || hand.isDoubled) {
+    // Block actions if insurance is pending
+    if (canTakeInsurance(room.game)) {
+      return NextResponse.json({ success: false, error: "Putuskan insurance dulu" }, { status: 400 })
+    }
+
+    if (hand.cards.length !== 2 || hand.isDoubled || hand.isSplit) {
       return NextResponse.json({ success: false, error: "Tidak bisa double" }, { status: 400 })
     }
 

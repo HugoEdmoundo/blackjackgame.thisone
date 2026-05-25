@@ -74,6 +74,7 @@ export type GameState = {
   turnStartedAt: number
   insuranceOffered: boolean
   dealerBlackjack: boolean
+  settingsConfigured: boolean
 }
 
 export type Room = {

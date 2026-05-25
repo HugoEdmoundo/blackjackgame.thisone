@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { canSurrender, getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
+import { canSurrender, getCurrentHand, hasPlayerDoneAllHands, canTakeInsurance } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,6 +29,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const hand = getCurrentHand(player, room.game.currentHandIndex)
     if (!hand || !canSurrender(hand)) {
       return NextResponse.json({ success: false, error: "Tidak bisa surrender" }, { status: 400 })
+    }
+
+    // Block actions if insurance is pending
+    if (canTakeInsurance(room.game)) {
+      return NextResponse.json({ success: false, error: "Putuskan insurance dulu" }, { status: 400 })
     }
 
     hand.isSurrendered = true

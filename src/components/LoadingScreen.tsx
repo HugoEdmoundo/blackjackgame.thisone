@@ -2,7 +2,7 @@
 
 export default function LoadingScreen({ text = "Loading..." }: { text?: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-table via-table-secondary to-table-accent flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-table via-table-secondary to-table-accent flex items-center justify-center" role="status" aria-label="Memuat">
       <div className="flex flex-col items-center gap-8">
         {/* Animated cards */}
         <div className="flex gap-4 items-center">

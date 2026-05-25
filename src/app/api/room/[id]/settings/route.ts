@@ -16,6 +16,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "Tidak bisa ubah settings saat game berjalan" }, { status: 400 })
     }
 
+    if (room.game.settingsConfigured) {
+      return NextResponse.json({ success: false, error: "Settings sudah dikunci" }, { status: 400 })
+    }
+
     const player = room.game.players.find((p) => p.id === playerId)
     if (!player?.isHost) {
       return NextResponse.json({ success: false, error: "Hanya host yang bisa ubah settings" }, { status: 403 })
@@ -30,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     room.game.settings = newSettings
+    room.game.settingsConfigured = true
 
     await kv.set(room.id, room)
 

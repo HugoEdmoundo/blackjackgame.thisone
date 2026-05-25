@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { kv } from "@/lib/kv"
-import { getCurrentHand, hasPlayerDoneAllHands } from "@/lib/game"
+import { getCurrentHand, hasPlayerDoneAllHands, canTakeInsurance } from "@/lib/game"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,6 +28,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const player = room.game.players[playerIdx]
     const hand = getCurrentHand(player, room.game.currentHandIndex)
     if (hand) hand.isDone = true
+
+    // Block actions if insurance is pending
+    if (canTakeInsurance(room.game)) {
+      return NextResponse.json({ success: false, error: "Putuskan insurance dulu" }, { status: 400 })
+    }
 
     room.game.currentHandIndex++
     while (

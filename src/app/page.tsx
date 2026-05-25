@@ -91,9 +91,11 @@ export default function HomePage() {
         {/* Card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
           {/* Tab switcher */}
-          <div className="flex mb-8 bg-white/5 rounded-xl p-1 border border-white/5">
+          <div className="flex mb-8 bg-white/5 rounded-xl p-1 border border-white/5" role="tablist" aria-label="Pilih aksi">
             <button
               onClick={() => setTab("create")}
+              role="tab"
+              aria-selected={tab === "create"}
               className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                 tab === "create"
                   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
@@ -104,6 +106,8 @@ export default function HomePage() {
             </button>
             <button
               onClick={() => setTab("join")}
+              role="tab"
+              aria-selected={tab === "join"}
               className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                 tab === "join"
                   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
@@ -116,19 +120,20 @@ export default function HomePage() {
 
           {/* Error */}
           {error && (
-            <div className="mb-5 bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+            <div className="mb-5 bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3 flex items-center gap-2" role="alert">
               <Sparkles size={14} className="shrink-0" />
               {error}
             </div>
           )}
 
           {/* Form */}
-          <div className="space-y-5">
+          <div className="space-y-5" role="form" aria-label="Form create atau join room">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Nama Kamu</label>
+              <label htmlFor="player-name" className="block text-sm font-medium text-gray-300 mb-1.5">Nama Kamu</label>
               <div className="relative">
                 <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
+                  id="player-name"
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
@@ -141,10 +146,11 @@ export default function HomePage() {
 
             {tab === "join" && (
               <div className="animate-slideInLeft" style={{ animationDuration: "0.25s" }}>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Room Code</label>
+                <label htmlFor="room-code" className="block text-sm font-medium text-gray-300 mb-1.5">Room Code</label>
                 <div className="relative">
                   <Key size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
+                    id="room-code"
                     type="text"
                     value={roomCode}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -180,11 +186,11 @@ export default function HomePage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 flex items-center justify-center gap-4 text-xs text-gray-500/60">
+        <footer className="text-center mt-8 flex items-center justify-center gap-4 text-xs text-gray-500/60">
           <span>Max 4 pemain per room</span>
           <span className="w-1 h-1 rounded-full bg-gray-600/40" />
           <span>v2.0</span>
-        </div>
+        </footer>
       </div>
     </div>
   )

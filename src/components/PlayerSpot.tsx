@@ -31,29 +31,29 @@ function HandDisplay({
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
           {totalHands > 1 && (
-            <span className="text-[10px] font-mono text-[#d4af37]/50 font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono text-[#d4af37]/50 font-bold uppercase tracking-wider" aria-label={`Hand ${hIdx + 1}`}>
               Hand {hIdx + 1}
             </span>
           )}
           {hand.isSplit && (
-            <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" aria-label="Split">
               Split
             </span>
           )}
           {hand.isDoubled && (
-            <span className="text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            <span className="text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" aria-label="Double">
               Double
             </span>
           )}
           {hand.isSurrendered && (
-            <span className="text-[10px] bg-gray-500/20 text-gray-300 border border-gray-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            <span className="text-[10px] bg-gray-500/20 text-gray-300 border border-gray-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" aria-label="Surrender">
               Surrender
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
           <ChipStack amount={hand.bet} size="xs" />
-          <span className="text-xs font-mono font-bold bg-black/30 text-[#d4af37] px-2 py-0.5 rounded-md">
+          <span className="text-xs font-mono font-bold bg-black/30 text-[#d4af37] px-2 py-0.5 rounded-md" aria-label={`Skor: ${hand.score === 0 ? "menunggu" : hand.score}`}>
             {hand.score === 0 ? "..." : hand.score}
           </span>
         </div>
@@ -78,13 +78,13 @@ function HandDisplay({
       )}
 
       {hand.isDone && !isFinished && !hand.isSurrendered && (
-        <div className="mt-1 text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase tracking-wider">
+        <div className="mt-1 text-[10px] text-blue-400 font-bold flex items-center gap-1 uppercase tracking-wider" role="status" aria-label="Selesai">
           <CheckCircle size={10} /> Done
         </div>
       )}
 
       {isActive && isCurrentHand && !isFinished && !hand.isDone && (
-        <div className="mt-1 text-[10px] text-[#d4af37] font-bold animate-pulse flex items-center gap-1 uppercase tracking-wider">
+        <div className="mt-1 text-[10px] text-[#d4af37] font-bold animate-pulse flex items-center gap-1 uppercase tracking-wider" role="status" aria-label="Giliran main">
           <ArrowRight size={10} /> Main
         </div>
       )}
@@ -130,6 +130,8 @@ export default function PlayerSpot({
 
   return (
     <div
+      role="region"
+      aria-label={`Pemain: ${player.name}${isActive ? ", sedang giliran" : ""}${isFinished ? ", selesai" : ""}`}
       className={`relative rounded-2xl border ${borderColor} ${bgColor} ${bgGlow} p-3 sm:p-4`}
     >
       <div className="flex items-center justify-between mb-2">
@@ -156,7 +158,7 @@ export default function PlayerSpot({
       </div>
 
       {player.hands.length === 0 ? (
-        <div className="flex items-center justify-center h-16 sm:h-20">
+        <div className="flex items-center justify-center h-16 sm:h-20" role="status">
           <span className="text-white/30 italic text-sm font-display">Menunggu kartu...</span>
         </div>
       ) : (

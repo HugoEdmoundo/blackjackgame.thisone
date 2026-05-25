@@ -7,6 +7,13 @@ const suitColors: Record<string, string> = {
   "♠️": "text-gray-900",
 }
 
+const suitNames: Record<string, string> = {
+  "❤️": "Hearts",
+  "♦️": "Diamonds",
+  "♣️": "Clubs",
+  "♠️": "Spades",
+}
+
 const suitSymbols: Record<string, string> = {
   "❤️": "♥",
   "♦️": "♦",
@@ -20,6 +27,8 @@ export default function Card({ card, hidden, index = 0, glow }: { card: CardType
   if (hidden) {
     return (
       <div
+        aria-label="Kartu tertutup"
+        role="img"
         className={`w-16 h-22 sm:w-20 sm:h-28 bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 rounded-xl border-2 border-[#d4af37]/40 flex items-center justify-center shadow-xl ${glowClass}`}
         style={{
           animation: `cardDeal 0.35s ease-out ${index * 0.08}s both`,
@@ -37,6 +46,8 @@ export default function Card({ card, hidden, index = 0, glow }: { card: CardType
 
   return (
     <div
+      aria-label={`${card.rank} ${suitNames[card.suit] || card.suit}`}
+      role="img"
       className={`w-16 h-22 sm:w-20 sm:h-28 bg-white dark:bg-[#1a2a4a] rounded-xl border-2 border-[#d4af37]/60 dark:border-[#d4af37]/40 flex flex-col items-center justify-between py-1.5 sm:py-2 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-1 cursor-default ${glowClass}`}
       style={{
         animation: `cardDeal 0.35s ease-out ${index * 0.08}s both`,

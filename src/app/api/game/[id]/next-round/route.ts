@@ -54,6 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       p.balance -= bet
       return {
         ...p,
+        insuranceDecided: false,
+        insuranceBet: 0,
         hands: [createInitialHand(rawHands[i], bet)],
       }
     })

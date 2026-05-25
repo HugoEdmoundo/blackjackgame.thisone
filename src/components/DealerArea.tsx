@@ -7,7 +7,7 @@ export default function DealerArea({ game }: { game: GameState }) {
   const isWaiting = game.status === "waiting"
 
   return (
-    <div className="relative">
+    <div className="relative" role="region" aria-label="Area dealer">
       <div className="absolute -inset-4 bg-[#d4af37]/5 rounded-[2rem] blur-2xl" />
 
       <div className="relative bg-gradient-to-b from-[#78350f]/40 via-[#713f12]/30 to-black/40 rounded-2xl border border-[#d4af37]/20 p-4 sm:p-5 shadow-[0_0_40px_rgba(212,175,55,0.08)]">

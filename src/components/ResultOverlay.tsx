@@ -34,7 +34,7 @@ export default function ResultOverlay({
   )
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-overlayFadeIn">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-overlayFadeIn" role="dialog" aria-modal="true" aria-label="Hasil permainan">
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
         <div className="mb-4 flex justify-center">
           {hasBlackjack ? (
@@ -89,6 +89,7 @@ export default function ResultOverlay({
           {isHost && (
             <button
               onClick={onNextRound}
+              aria-label="Mulai ronde selanjutnya"
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all active:scale-95"
             >
               <Play size={18} />
@@ -97,6 +98,7 @@ export default function ResultOverlay({
           )}
           <button
             onClick={onNewRoom}
+            aria-label="Buat room baru"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all active:scale-95"
           >
             <Plus size={18} />

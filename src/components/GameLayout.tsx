@@ -29,7 +29,7 @@ export default function GameLayout({
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a1628] via-[#101d35] to-[#162a4a] flex flex-col">
       {/* === HEADER BAR === */}
-      <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-[#0a1628]/80 backdrop-blur-md z-30">
+      <header role="banner" className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-[#0a1628]/80 backdrop-blur-md z-30">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-lg sm:text-xl text-[#d4af37] tracking-wide">
             Blackjack
@@ -44,9 +44,10 @@ export default function GameLayout({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <nav className="flex items-center gap-3" aria-label="Navigasi">
+
           {timeLeft !== null && isMyTurn && timeLeft > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" role="timer" aria-label={`Sisa waktu: ${timeLeft} detik`}>
               <div className={`text-sm font-mono font-bold ${timeLeft <= 5 ? "text-red-400" : "text-[#d4af37]"}`}>
                 {timeLeft}s
               </div>
@@ -73,6 +74,7 @@ export default function GameLayout({
             <button
               onClick={onLeave}
               className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors text-red-400 hover:text-red-300"
+              aria-label="Keluar Room"
               title="Keluar Room"
             >
               <LogOut size={16} />
@@ -81,15 +83,16 @@ export default function GameLayout({
           <button
             onClick={onToggleDark}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] transition-colors text-white/50 hover:text-white"
+            aria-label={darkMode ? "Mode Terang" : "Mode Gelap"}
             title={darkMode ? "Mode Terang" : "Mode Gelap"}
           >
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-        </div>
+        </nav>
       </header>
 
       {/* === TABLE AREA === */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" aria-label="Area permainan">
         <div className="min-h-full felt-bg flex flex-col">
           {/* Content */}
           <div className="flex-1 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto w-full">

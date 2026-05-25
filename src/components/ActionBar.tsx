@@ -50,7 +50,7 @@ export default function ActionBar({
 
   if (needsInsuranceDecision) {
     return (
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3" role="region" aria-label="Keputusan insurance">
         <div className="flex items-center gap-2 text-[#d4af37] font-bold text-sm">
           <Shield size={16} /> Dealer menunjukkan Ace!
         </div>
@@ -61,6 +61,7 @@ export default function ActionBar({
           <button
             onClick={() => onInsurance(true)}
             disabled={actionLoading}
+            aria-label={`Ambil insurance sebesar ${insuranceBet} chip`}
             className="flex items-center gap-2 bg-[#d4af37] hover:bg-[#e4bf47] text-black font-bold py-2 px-5 rounded-xl transition-all disabled:opacity-50 active:scale-95 text-sm"
           >
             <CheckCircle size={16} /> Ambil ({insuranceBet})
@@ -68,6 +69,7 @@ export default function ActionBar({
           <button
             onClick={() => onInsurance(false)}
             disabled={actionLoading}
+            aria-label="Skip insurance"
             className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold py-2 px-5 rounded-xl transition-all disabled:opacity-50 active:scale-95 text-sm border border-white/[0.08]"
           >
             <Minus size={16} /> Skip
@@ -77,21 +79,30 @@ export default function ActionBar({
     )
   }
 
-  if (canDoInsurance && !isMyTurn && !game.insuranceOffered) {
-    return (
-      <div className="text-center text-[#d4af37]/50 text-sm font-medium">
-        Menunggu pemain lain memutuskan insurance...
-      </div>
-    )
-  }
+   if (canDoInsurance && !isMyTurn && !game.insuranceOffered) {
+     return (
+       <div className="text-center text-[#d4af37]/50 text-sm font-medium" role="status">
+         Menunggu pemain lain memutuskan insurance...
+       </div>
+     );
+   }
+
+   if (canDoInsurance && isMyTurn && !game.insuranceOffered) {
+     return (
+       <div className="text-center text-[#d4af37]/50 text-sm font-medium">
+         Menunggu pemain lain memutuskan insurance...
+       </div>
+     );
+   }
 
   if (isMyAction) {
     return (
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3" role="region" aria-label="Aksi permainan">
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
           <button
             onClick={onHit}
             disabled={actionLoading}
+            aria-label="Hit - ambil kartu tambahan"
             className="flex items-center gap-1.5 sm:gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-5 sm:px-6 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-lg text-sm"
           >
             <HandMetal size={18} /> Hit
@@ -99,6 +110,7 @@ export default function ActionBar({
           <button
             onClick={onStand}
             disabled={actionLoading}
+            aria-label="Stand - berhenti ambil kartu"
             className="flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-5 sm:px-6 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-lg text-sm"
           >
             <HandIcon size={18} /> Stand
@@ -107,6 +119,7 @@ export default function ActionBar({
             <button
               onClick={onDouble}
               disabled={actionLoading}
+              aria-label="Double - gandakan taruhan"
               className="flex items-center gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold py-2.5 px-4 sm:px-5 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-lg text-sm"
             >
               <RefreshCw size={16} /> Double
@@ -116,6 +129,7 @@ export default function ActionBar({
             <button
               onClick={onSplit}
               disabled={actionLoading}
+              aria-label="Split - pisah kartu"
               className="flex items-center gap-1.5 sm:gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-4 sm:px-5 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-lg text-sm"
             >
               <Scissors size={16} /> Split
@@ -125,6 +139,7 @@ export default function ActionBar({
             <button
               onClick={onSurrender}
               disabled={actionLoading}
+              aria-label="Surrender - menyerah"
               className="flex items-center gap-1.5 sm:gap-2 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2.5 px-4 sm:px-5 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-lg text-sm"
             >
               <Flag size={16} /> Surrender
@@ -137,7 +152,7 @@ export default function ActionBar({
 
   if (game.status === "playing" && myPlayer && !isMyTurn && !needsInsuranceDecision) {
     return (
-      <div className="text-center text-sm">
+      <div className="text-center text-sm" role="status">
         <span className="text-white/40">Giliran: </span>
         <span className="text-[#d4af37] font-bold">{currentPlayer?.name}</span>
       </div>
@@ -146,7 +161,7 @@ export default function ActionBar({
 
   if (game.status === "playing" && isMyTurn && currentHand?.isDone && !needsInsuranceDecision) {
     return (
-      <div className="text-center text-sm text-blue-400 font-medium">
+      <div className="text-center text-sm text-blue-400 font-medium" role="status">
         Kamu sudah done. Tunggu pemain lain...
       </div>
     )
