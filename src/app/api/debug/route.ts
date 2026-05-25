@@ -31,7 +31,7 @@ export async function GET() {
     storeType = "InMemory (fallback)"
   }
 
-  // Test: write a dummy room, read it back, delete it
+  // Test 1: write a dummy room, read it back, delete it
   try {
     const testRoom = {
       id: "__test__",
@@ -82,12 +82,58 @@ export async function GET() {
     testResult.deleteError = String(e)
   }
 
-  // Check keys again after test
-  let postTestCount = 0
+  // Test 2: simulate what room creation does
+  // Use the EXACT same kv.set flow as POST /api/room
   try {
-    const allRooms2 = await kv.getAll()
-    postTestCount = allRooms2.filter((r) => r.id !== "__test__").length
-  } catch {}
+    const simRoom = {
+      id: "__sim__",
+      code: "SIM",
+      game: {
+        id: "__sim__",
+        code: "SIM",
+        status: "waiting" as const,
+        players: [{
+          id: "sim-player",
+          name: "Sim",
+          hands: [],
+          isHost: true,
+          balance: STARTING_BALANCE,
+          totalBet: DEFAULT_SETTINGS.defaultBet,
+          insuranceBet: 0,
+          insuranceDecided: false,
+          stats: { totalGames: 0, totalWins: 0, totalLosses: 0, totalPushes: 0, blackjackCount: 0, currentStreak: 0, bestWinStreak: 0 },
+        }],
+        dealerHand: [],
+        dealerScore: 0,
+        currentPlayerIndex: 0,
+        currentHandIndex: 0,
+        deck: [],
+        createdAt: Date.now(),
+        round: 0,
+        settings: { ...DEFAULT_SETTINGS },
+        turnStartedAt: 0,
+        insuranceOffered: false,
+        dealerBlackjack: false,
+        settingsConfigured: false,
+      },
+    }
+
+    await kv.set(simRoom.id, simRoom as any)
+    const simRead = await kv.get(simRoom.id)
+    const simAll = await kv.getAll()
+
+    testResult.simCreateSuccess = true
+    testResult.simFound = !!simRead
+    testResult.simInAll = simAll.some((r) => r.id === "__sim__")
+    testResult.simKeysAfterCreate = simAll.length
+
+    await kv.delete(simRoom.id)
+    const simAll2 = await kv.getAll()
+    testResult.simKeysAfterDelete = simAll2.length
+  } catch (e) {
+    testResult.simCreateSuccess = false
+    testResult.simError = String(e)
+  }
 
   return NextResponse.json({
     env,
@@ -96,6 +142,5 @@ export async function GET() {
     roomsCount,
     rooms,
     testResult,
-    postTestRoomsCount: postTestCount,
   })
 }

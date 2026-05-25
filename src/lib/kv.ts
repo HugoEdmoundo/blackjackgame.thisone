@@ -39,49 +39,39 @@ class InMemoryStore implements Store {
   }
 }
 
-async function createRedisStore(): Promise<Store | null> {
-  try {
-    const hasKV = !!(process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL)
-    const hasToken = !!(process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)
-    if (!hasKV) {
-      console.log("[kv] No KV_URL env var — falling back to in-memory")
-      return null
-    }
+async function createRedisStore(): Promise<Store> {
+  const { Redis } = await import("@upstash/redis")
+  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || ""
 
-    const { Redis } = await import("@upstash/redis")
-    const url = (process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL)!
-    const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || ""
+  if (!url) {
+    throw new Error("KV_URL is not set")
+  }
 
-    console.log("[kv] Connecting to Redis:", url.slice(0, 20) + "...", "token set:", !!token)
+  const redis = new Redis({ url, token })
 
-    const redis = new Redis({ url, token })
+  // Test the connection
+  await redis.get("__health__")
 
-    // Test the connection
-    await redis.get("__health__")
+  console.log("[kv] Redis connected")
 
-    console.log("[kv] Redis connected successfully")
-
-    return {
-      async get(id: string) {
-        const data = await redis.get(`room:${id}`)
-        return data ? (data as unknown as Room) : undefined
-      },
-      async set(id: string, room: Room) {
-        await redis.set(`room:${id}`, JSON.parse(JSON.stringify(room)))
-      },
-      async delete(id: string) {
-        await redis.del(`room:${id}`)
-      },
-      async getAll() {
-        const keys = await redis.keys("room:*")
-        if (keys.length === 0) return []
-        const data = await redis.mget<unknown[]>(...keys)
-        return data.filter(Boolean) as Room[]
-      },
-    }
-  } catch (err) {
-    console.error("[kv] Redis store error:", err)
-    return null
+  return {
+    async get(id: string) {
+      const data = await redis.get(`room:${id}`)
+      return data ? (data as unknown as Room) : undefined
+    },
+    async set(id: string, room: Room) {
+      await redis.set(`room:${id}`, JSON.parse(JSON.stringify(room)))
+    },
+    async delete(id: string) {
+      await redis.del(`room:${id}`)
+    },
+    async getAll() {
+      const keys = await redis.keys("room:*")
+      if (keys.length === 0) return []
+      const data = await redis.mget<unknown[]>(...keys)
+      return data.filter(Boolean) as Room[]
+    },
   }
 }
 
@@ -90,11 +80,19 @@ let storePromise: Promise<Store> | null = null
 async function getStore(): Promise<Store> {
   if (storePromise) return storePromise
 
+  const isDev = process.env.NODE_ENV !== "production"
+
   storePromise = (async () => {
-    const redis = await createRedisStore()
-    if (redis) return redis
-    console.log("No Redis available, using in-memory store")
-    return new InMemoryStore()
+    try {
+      return await createRedisStore()
+    } catch (err) {
+      if (isDev) {
+        console.log("[kv] Redis unavailable, using in-memory store:", err)
+        return new InMemoryStore()
+      }
+      // In production: throw hard so we see the error
+      throw err
+    }
   })()
 
   return storePromise

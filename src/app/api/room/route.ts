@@ -58,10 +58,21 @@ export async function POST(req: NextRequest) {
       },
     }
 
+    console.log("[room] Creating room:", roomId, "code:", code, "player:", playerId)
+
     await kv.set(roomId, room)
+    console.log("[room] kv.set done for:", roomId)
+
+    // Verify immediately
+    const verify = await kv.get(roomId)
+    console.log("[room] kv.get after set:", verify ? "FOUND" : "NOT FOUND", verify?.id)
+
+    const all = await kv.getAll()
+    console.log("[room] kv.getAll count:", all.length)
 
     return NextResponse.json({ success: true, room, playerId })
-  } catch {
+  } catch (err) {
+    console.error("[room] Error creating room:", err)
     return NextResponse.json({ success: false, error: "Gagal membuat room" }, { status: 500 })
   }
 }
