@@ -13,7 +13,7 @@ import Confetti from "@/components/Confetti"
 import { showToast } from "@/components/Toast"
 import { canTakeInsurance, canSplit, canDoubleDown, canSurrender, getCurrentHand } from "@/lib/game"
 import { dealCard, chipSound, winSound, loseSound, blackjackFanfare, buttonClick, insuranceSound } from "@/lib/sounds"
-import { BarChart3, Play, Plus } from "lucide-react"
+import { BarChart3, Play, Plus, LogOut } from "lucide-react"
 
 export default function RoomPage() {
   const params = useParams()
@@ -413,14 +413,25 @@ export default function RoomPage() {
                     <Play size={18} />
                     Ronde Selanjutnya
                   </button>
-                  <button
-                    onClick={handlePlayAgain}
-                    aria-label="Buat room baru"
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 border border-white/10"
-                  >
-                    <Plus size={18} />
-                    Room Baru
-                  </button>
+                  {isHost ? (
+                    <button
+                      onClick={handlePlayAgain}
+                      aria-label="Buat room baru"
+                      className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 border border-white/10"
+                    >
+                      <Plus size={18} />
+                      Room Baru
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleLeave}
+                      aria-label="Keluar room"
+                      className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold py-3 px-6 rounded-xl transition-all active:scale-95 border border-red-500/20"
+                    >
+                      <LogOut size={18} />
+                      Leave
+                    </button>
+                  )}
                 </div>
 
                 {/* Stats */}
