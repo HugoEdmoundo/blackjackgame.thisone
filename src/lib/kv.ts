@@ -41,12 +41,25 @@ class InMemoryStore implements Store {
 
 async function createRedisStore(): Promise<Store | null> {
   try {
+    const hasKV = !!(process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL)
+    const hasToken = !!(process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)
+    if (!hasKV) {
+      console.log("[kv] No KV_URL env var — falling back to in-memory")
+      return null
+    }
+
     const { Redis } = await import("@upstash/redis")
-    const url = process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
+    const url = (process.env.KV_URL || process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL)!
     const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || ""
-    if (!url) return null
+
+    console.log("[kv] Connecting to Redis:", url.slice(0, 20) + "...", "token set:", !!token)
 
     const redis = new Redis({ url, token })
+
+    // Test the connection
+    await redis.get("__health__")
+
+    console.log("[kv] Redis connected successfully")
 
     return {
       async get(id: string) {
@@ -66,7 +79,8 @@ async function createRedisStore(): Promise<Store | null> {
         return data.filter(Boolean) as Room[]
       },
     }
-  } catch {
+  } catch (err) {
+    console.error("[kv] Redis store error:", err)
     return null
   }
 }
